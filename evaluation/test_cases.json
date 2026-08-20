@@ -1,0 +1,229 @@
+{
+  "evaluation_name": "task_parsing",
+  "version": "1.0",
+  "description": "Evaluation cases for the AI Task Assistant natural-language task parser.",
+  "cases": [
+    {
+      "id": "explicit_priority_weekday",
+      "category": "explicit_priority_and_weekday",
+      "input": {
+        "request": "Remind me to submit the project report by Friday and mark it as high priority.",
+        "reference_date": "2026-08-20",
+        "timezone": "Asia/Kolkata"
+      },
+      "expected": {
+        "status": "accepted",
+        "task": {
+          "title": "Submit project report",
+          "description": "Submit the project report",
+          "priority": "high",
+          "due_date": "2026-08-21"
+        },
+        "reason": null
+      }
+    },
+    {
+      "id": "no_metadata",
+      "category": "defaults",
+      "input": {
+        "request": "Buy milk",
+        "reference_date": null,
+        "timezone": null
+      },
+      "expected": {
+        "status": "accepted",
+        "task": {
+          "title": "Buy milk",
+          "description": "Buy milk",
+          "priority": "medium",
+          "due_date": null
+        },
+        "reason": null
+      }
+    },
+    {
+      "id": "tomorrow",
+      "category": "relative_date",
+      "input": {
+        "request": "Finish the presentation tomorrow",
+        "reference_date": "2026-08-20",
+        "timezone": "Asia/Kolkata"
+      },
+      "expected": {
+        "status": "accepted",
+        "task": {
+          "title": "Finish the presentation",
+          "description": "Finish the presentation",
+          "priority": "medium",
+          "due_date": "2026-08-21"
+        },
+        "reason": null
+      }
+    },
+    {
+      "id": "next_weekday",
+      "category": "relative_date",
+      "input": {
+        "request": "URGENT: submit the application next Monday",
+        "reference_date": "2026-08-20",
+        "timezone": "Asia/Kolkata"
+      },
+      "expected": {
+        "status": "accepted",
+        "task": {
+          "title": "Submit the application",
+          "description": "Submit the application",
+          "priority": "high",
+          "due_date": "2026-08-24"
+        },
+        "reason": null
+      }
+    },
+    {
+      "id": "explicit_low_priority",
+      "category": "explicit_priority",
+      "input": {
+        "request": "Low priority: organize expense receipts by 2026-09-01",
+        "reference_date": null,
+        "timezone": null
+      },
+      "expected": {
+        "status": "accepted",
+        "task": {
+          "title": "Organize expense receipts",
+          "description": "Organize expense receipts",
+          "priority": "low",
+          "due_date": "2026-09-01"
+        },
+        "reason": null
+      }
+    },
+    {
+      "id": "no_invented_deadline",
+      "category": "no_invention",
+      "input": {
+        "request": "Submit the report",
+        "reference_date": null,
+        "timezone": null
+      },
+      "expected": {
+        "status": "accepted",
+        "task": {
+          "title": "Submit the report",
+          "description": "Submit the report",
+          "priority": "medium",
+          "due_date": null
+        },
+        "reason": null
+      }
+    },
+    {
+      "id": "missing_date_context",
+      "category": "missing_context",
+      "input": {
+        "request": "Pay rent tomorrow",
+        "reference_date": null,
+        "timezone": null
+      },
+      "expected": {
+        "status": "accepted",
+        "task": {
+          "title": "Pay rent",
+          "description": "Pay rent",
+          "priority": "medium",
+          "due_date": null
+        },
+        "reason": null
+      }
+    },
+    {
+      "id": "time_outside_schema",
+      "category": "unsupported_time_semantics",
+      "input": {
+        "request": "Call Alex tomorrow at 3 PM",
+        "reference_date": "2026-08-20",
+        "timezone": "Asia/Kolkata"
+      },
+      "expected": {
+        "status": "accepted",
+        "task": {
+          "title": "Call Alex",
+          "description": "Call Alex at 3 PM",
+          "priority": "medium",
+          "due_date": "2026-08-21"
+        },
+        "reason": null
+      }
+    },
+    {
+      "id": "ambiguous_request",
+      "category": "rejection",
+      "input": {
+        "request": "Maybe I should do something about my project",
+        "reference_date": null,
+        "timezone": null
+      },
+      "expected": {
+        "status": "rejected",
+        "task": null,
+        "reason": "ambiguous_or_non_actionable"
+      }
+    },
+    {
+      "id": "informational_request",
+      "category": "rejection",
+      "input": {
+        "request": "What day is next Friday?",
+        "reference_date": "2026-08-20",
+        "timezone": "Asia/Kolkata"
+      },
+      "expected": {
+        "status": "rejected",
+        "task": null,
+        "reason": "ambiguous_or_non_actionable"
+      }
+    },
+    {
+      "id": "multiple_tasks",
+      "category": "rejection",
+      "input": {
+        "request": "Buy milk and schedule a dentist appointment",
+        "reference_date": null,
+        "timezone": null
+      },
+      "expected": {
+        "status": "rejected",
+        "task": null,
+        "reason": "multiple_tasks"
+      }
+    },
+    {
+      "id": "past_date",
+      "category": "rejection",
+      "input": {
+        "request": "Submit the report by 2026-08-19",
+        "reference_date": "2026-08-20",
+        "timezone": "Asia/Kolkata"
+      },
+      "expected": {
+        "status": "rejected",
+        "task": null,
+        "reason": "past_due_date"
+      }
+    },
+    {
+      "id": "contradictory_deadline",
+      "category": "rejection",
+      "input": {
+        "request": "Submit the report tomorrow, actually next month",
+        "reference_date": "2026-08-20",
+        "timezone": "Asia/Kolkata"
+      },
+      "expected": {
+        "status": "rejected",
+        "task": null,
+        "reason": "ambiguous_due_date"
+      }
+    }
+  ]
+}
