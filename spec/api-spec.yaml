@@ -1,0 +1,282 @@
+openapi: 3.1.0
+info:
+  title: AI Task Assistant API
+  version: 1.0.0
+  description: >-
+    REST API for creating structured tasks from natural-language requests and
+    managing the resulting tasks.
+paths:
+  /tasks/from-natural-language:
+    post:
+      summary: Create a task from a natural-language request
+      operationId: createTaskFromNaturalLanguage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NaturalLanguageTaskRequest'
+            example:
+              request: Remind me to submit the project report by Friday and mark it as high priority.
+              reference_date: '2026-08-20'
+              timezone: Asia/Kolkata
+      responses:
+        '201':
+          description: Task created and persisted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+              example:
+                id: task_01J...
+                title: Submit project report
+                description: Submit the project report
+                priority: high
+                due_date: '2026-08-21'
+                created_at: '2026-08-20T12:30:00Z'
+                updated_at: '2026-08-20T12:30:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '504':
+          $ref: '#/components/responses/GatewayTimeout'
+  /tasks:
+    get:
+      summary: Retrieve all tasks
+      operationId: listTasks
+      responses:
+        '200':
+          description: All stored tasks. Returns an empty array when no tasks exist.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+              example: []
+  /tasks/{task_id}:
+    parameters:
+      - $ref: '#/components/parameters/TaskId'
+    get:
+      summary: Retrieve a specific task
+      operationId: getTask
+      responses:
+        '200':
+          description: The requested task.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update a task
+      operationId: updateTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdateRequest'
+            example:
+              priority: high
+              due_date: '2026-08-25'
+      responses:
+        '200':
+          description: The complete updated task.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Permanently delete a task
+      operationId: deleteTask
+      responses:
+        '204':
+          description: Task deleted successfully. No response body is returned.
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  parameters:
+    TaskId:
+      name: task_id
+      in: path
+      required: true
+      description: Unique identifier of the task.
+      schema:
+        type: string
+  schemas:
+    NaturalLanguageTaskRequest:
+      type: object
+      required:
+        - request
+      properties:
+        request:
+          type: string
+          minLength: 1
+          pattern: '.*\S.*'
+          description: Required natural-language task request; it must not be blank or whitespace-only.
+        reference_date:
+          type: string
+          format: date
+          description: Optional date used to resolve relative dates deterministically.
+        timezone:
+          type: string
+          minLength: 1
+          description: Optional timezone used to resolve relative dates deterministically; it must be valid when supplied.
+    Task:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - priority
+        - due_date
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          description: Unique task identifier.
+        title:
+          type: string
+          minLength: 1
+          pattern: '.*\S.*'
+          description: Concise required task title.
+        description:
+          type:
+            - string
+            - 'null'
+          description: Optional task description.
+        priority:
+          type: string
+          enum:
+            - low
+            - medium
+            - high
+          default: medium
+          description: Task priority. Defaults to medium when omitted from the natural-language request.
+        due_date:
+          type:
+            - string
+            - 'null'
+          format: date
+          description: Optional deadline as an ISO 8601 calendar date; null when no due date can be determined.
+        created_at:
+          type: string
+          format: date-time
+          description: UTC timestamp when the task was created.
+        updated_at:
+          type: string
+          format: date-time
+          description: UTC timestamp when the task was last updated.
+    TaskUpdateRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title:
+          type: string
+          minLength: 1
+          pattern: '.*\S.*'
+          description: Replacement task title; it must not be empty or whitespace-only.
+        description:
+          type: string
+          description: Replacement task description.
+        priority:
+          type: string
+          enum:
+            - low
+            - medium
+            - high
+          description: Replacement task priority.
+        due_date:
+          type:
+            - string
+            - 'null'
+          format: date
+          description: Replacement deadline as an ISO 8601 calendar date, or null to clear it.
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+            - details
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code.
+            message:
+              type: string
+              description: Safe human-readable explanation of the error.
+            details:
+              type: array
+              items:
+                type: object
+                required:
+                  - field
+                  - issue
+                properties:
+                  field:
+                    type: string
+                  issue:
+                    type: string
+      example:
+        error:
+          code: VALIDATION_ERROR
+          message: 'priority must be one of: low, medium, high'
+          details:
+            - field: priority
+              issue: unsupported value
+  responses:
+    BadRequest:
+      description: The request is missing required content or contains malformed input, such as a blank request, malformed reference date, invalid timezone, or an update with no editable fields.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UnprocessableEntity:
+      description: The request is syntactically valid but cannot be processed, such as an ambiguous task, invalid LLM output, unresolved relative date, past deadline, unsupported priority, empty title, or invalid date value.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: No task exists for the supplied task identifier.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalServerError:
+      description: Task persistence failed. A task is not reported as created unless it was successfully committed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ServiceUnavailable:
+      description: The LLM provider is unavailable or rate-limited; no partial task is created.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    GatewayTimeout:
+      description: The LLM provider exceeded the configured timeout; no partial task is created.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
