@@ -1,6 +1,6 @@
 {
   "evaluation_name": "task_parsing",
-  "version": "1.0",
+  "version": "1.3",
   "description": "Evaluation cases for the AI Task Assistant natural-language task parser.",
   "cases": [
     {
@@ -74,6 +74,101 @@
           "title": "Submit the application",
           "description": "Submit the application",
           "priority": "high",
+          "due_date": "2026-08-24"
+        },
+        "reason": null
+      }
+    },
+    {
+      "id": "bare_weekday_on_same_day",
+      "category": "relative_date",
+      "input": {
+        "request": "Review the budget Friday",
+        "reference_date": "2026-08-21",
+        "timezone": "Asia/Kolkata"
+      },
+      "expected": {
+        "status": "accepted",
+        "task": {
+          "title": "Review the budget",
+          "description": "Review the budget",
+          "priority": "medium",
+          "due_date": "2026-08-28"
+        },
+        "reason": null
+      }
+    },
+    {
+      "id": "on_weekday_on_same_day",
+      "category": "relative_date",
+      "input": {
+        "request": "Review the budget on Friday",
+        "reference_date": "2026-08-21",
+        "timezone": "Asia/Kolkata"
+      },
+      "expected": {
+        "status": "accepted",
+        "task": {
+          "title": "Review the budget",
+          "description": "Review the budget",
+          "priority": "medium",
+          "due_date": "2026-08-28"
+        },
+        "reason": null
+      }
+    },
+    {
+      "id": "by_weekday_on_same_day",
+      "category": "relative_date",
+      "input": {
+        "request": "Review the budget by Friday",
+        "reference_date": "2026-08-21",
+        "timezone": "Asia/Kolkata"
+      },
+      "expected": {
+        "status": "accepted",
+        "task": {
+          "title": "Review the budget",
+          "description": "Review the budget",
+          "priority": "medium",
+          "due_date": "2026-08-28"
+        },
+        "reason": null
+      }
+    },
+    {
+      "id": "next_weekday_from_same_day",
+      "category": "relative_date",
+      "input": {
+        "request": "Review the budget next Friday",
+        "reference_date": "2026-08-21",
+        "timezone": "Asia/Kolkata"
+      },
+      "expected": {
+        "status": "accepted",
+        "task": {
+          "title": "Review the budget",
+          "description": "Review the budget",
+          "priority": "medium",
+          "due_date": "2026-08-28"
+        },
+        "reason": null
+      }
+    },
+    {
+      "id": "bare_weekday_across_weekend",
+      "category": "relative_date",
+      "input": {
+        "request": "Prepare the slides by Monday",
+        "reference_date": "2026-08-22",
+        "timezone": "Asia/Kolkata"
+      },
+      "expected": {
+        "status": "accepted",
+        "task": {
+          "title": "Prepare the slides",
+          "description": "Prepare the slides",
+          "priority": "medium",
           "due_date": "2026-08-24"
         },
         "reason": null
