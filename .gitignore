@@ -1,2 +1,4 @@
 .env
 .task-assistant
+__pycache__/
+*.py[cod]
