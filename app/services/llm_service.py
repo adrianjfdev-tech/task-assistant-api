@@ -1,54 +1,9 @@
-import os
+import json
+
+from pydantic import BaseModel, ValidationError
 from typing import Literal
 
-from google import genai
-from google.genai import types
-from pydantic import BaseModel
-
-
-SYSTEM_PROMPT = """
-You convert one natural-language request into one AI Task Assistant task.
-
-Use only facts directly stated or unambiguously implied by the request
-and the supplied date context. Do not invent people, deadlines, priorities,
-descriptions, reminder schedules, notifications, recurrence, labels, or
-extra tasks.
-
-Inputs:
-- request: the user's natural-language request
-- reference_date: ISO date (YYYY-MM-DD), or null
-- timezone: IANA timezone, or null
-
-Return a task only when the request contains one meaningful, actionable task.
-Reject requests that are ambiguous, speculative, informational, non-actionable,
-contradictory, or contain multiple independent tasks.
-
-For an accepted task:
-- title: concise action-focused title. Remove conversational wrapper text
-  such as "remind me to".
-- description: preserve the core task wording without adding information.
-  Use null only if no useful description can be safely produced.
-- priority:
-  - high only when explicitly indicated, such as "urgent", "high priority",
-    or "critical".
-  - low only when explicitly indicated.
-  - medium otherwise.
-- due_date:
-  - Return YYYY-MM-DD or null only.
-  - Resolve relative dates only using both reference_date and timezone.
-  - "today" = reference_date.
-  - "tomorrow" = one calendar day after reference_date.
-  - "next <weekday>" = the first named weekday strictly after reference_date.
-  - a bare weekday such as "Friday" = the named weekday on or after
-    reference_date.
-  - If the request has no reliable date, or relative-date context is
-    incomplete or invalid, use null.
-  - If a resolved due date is before reference_date, reject the request.
-  - Do not create a time, reminder, or notification. A time mentioned by
-    the user may remain only in description.
-
-Return only the structured output.
-"""
+from app.repository.task_repository import create_task
 
 
 class TaskResult(BaseModel):
@@ -64,36 +19,58 @@ class TaskParseResult(BaseModel):
     reason: str | None
 
 
-def parse_task(
+async def parse_task(
     request: str,
     reference_date: str | None = None,
     timezone: str | None = None,
+    llm_service=None,
 ) -> TaskParseResult:
 
-    api_key = os.getenv("GEMINI_API_KEY")
+    if llm_service is None:
+        raise RuntimeError("LLM service is not configured")
 
-    if not api_key:
-        raise RuntimeError("GEMINI_API_KEY is not configured")
-
-    client = genai.Client(api_key=api_key)
-
-    user_input = f"""
-request: {request}
-reference_date: {reference_date}
-timezone: {timezone}
-"""
-
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=user_input,
-        config=types.GenerateContentConfig(
-            system_instruction=SYSTEM_PROMPT,
-            response_mime_type="application/json",
-            response_schema=TaskParseResult,
-        ),
+    response = await llm_service.generate_task(
+        request=request,
+        reference_date=reference_date,
+        timezone=timezone,
     )
 
-    if response.parsed is None:
-        raise RuntimeError("Gemini returned no structured result")
+    # Rejected request: model did not call create_task.
+    if response.tool_name is None:
 
-    return response.parsed
+        if not response.content:
+            raise RuntimeError("LLM returned no content")
+
+        try:
+            return TaskParseResult.model_validate(
+                json.loads(response.content)
+            )
+        except (json.JSONDecodeError, ValidationError) as exc:
+            raise RuntimeError(
+                "LLM returned invalid structured output"
+            ) from exc
+
+    # Accepted request: model called create_task.
+    if response.tool_name != "create_task":
+        raise RuntimeError(
+            f"LLM called unexpected tool: {response.tool_name}"
+        )
+
+    arguments = response.tool_arguments
+
+    task = create_task(
+        title=arguments["title"],
+        priority=arguments["priority"],
+        due_date=arguments["due_date"],
+    )
+
+    return TaskParseResult(
+        status="accepted",
+        task=TaskResult(
+            title=task["title"],
+            description=task["title"],
+            priority=task["priority"],
+            due_date=task["due_date"],
+        ),
+        reason=None,
+    )
